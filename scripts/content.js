@@ -1,4 +1,3 @@
-// Helper to wait for elements (useful for slow SPAs)
 async function waitForScrape() {
     for (let i = 0; i < 10; i++) {
         const q = scrapeQuestionInternal();
@@ -43,14 +42,12 @@ function scrapeQuestionInternal() {
 
     if (!title || title === "Loading..." || title.length < 2) title = document.querySelector('h1')?.innerText || document.title;
 
-    // Clean title
     title = title.replace(/^\d+\.\s*/, '').trim();
 
     const type = url.match(/problems|problemset|contest|challenges|tasks|task/) ? "Question" : "Blog";
     return title ? { title, difficulty, type, topics } : null;
 }
 
-// Keep the old name for internal logic compatibility if needed but redirect
 function scrapeQuestion() { return scrapeQuestionInternal(); }
 
 async function quickSave(subStatus, providedQ = null) {

@@ -15,7 +15,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     let allQuestions = [];
     let filter = { platform: 'all', topic: 'all', search: '' };
 
-    // Sidebar Toggle
     const { sidebarCollapsed = false } = await chrome.storage.local.get('sidebarCollapsed');
     if (sidebarCollapsed) sidebar.classList.add('collapsed');
 
@@ -24,7 +23,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         await chrome.storage.local.set({ sidebarCollapsed: isCollapsed });
     };
 
-    // Theme logic
     const { theme = 'dark' } = await chrome.storage.local.get('theme');
     applyTheme(theme);
 
@@ -45,7 +43,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // Utility: Title Case
     function toTitleCase(str) {
         if (!str) return '';
         // Handle camelCase or snake_case if existing
@@ -68,12 +65,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const platforms = {};
         const topics = {};
 
-        // Count platforms (always from all questions)
         allQuestions.forEach(q => {
             platforms[q.platform] = (platforms[q.platform] || 0) + 1;
         });
 
-        // Filter topics based on selected platform
         const platformFiltered = filter.platform === 'all'
             ? allQuestions
             : allQuestions.filter(q => q.platform === filter.platform);
@@ -86,7 +81,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         totalCountEl.innerText = allQuestions.length;
 
-        // Platform UI
         pFilters.innerHTML = '';
         const allPlatformDiv = document.createElement('div');
         allPlatformDiv.className = `filter-item ${filter.platform === 'all' ? 'active' : ''}`;
@@ -124,7 +118,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function setFilter(type, val) {
-        // Immediate UI feedback for highlighting
         document.querySelectorAll(`.filter-item[data-type="${type}"]`).forEach(el => el.classList.remove('active'));
         // Find the specific element clicked (if available) or update after re-render
 
