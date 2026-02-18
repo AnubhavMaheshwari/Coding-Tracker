@@ -1,8 +1,6 @@
-# 🚀 Coding Tracker
+#  Coding Tracker
 
 A professional, minimalist browser extension to track your coding journey across popular platforms like LeetCode, GeeksforGeeks, and Codeforces. Designed for developers who want to keep their workspace clean while maintaining a "truthful" record of their progress.
-
-![Banner](assets/extension_logo_128.png)
 
 ## ✨ Features
 
