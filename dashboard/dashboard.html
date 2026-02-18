@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coding Tracker | Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0f1a;
+            --card-bg: #161e2e;
+            --primary: #38bdf8;
+            --text: #f1f5f9;
+            --text-dim: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08);
+            --success: #10b981;
+            --error: #f43f5e;
+            --purple: #a78bfa;
+            --sidebar: #101827;
+        }
+
+        body.light-mode {
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --primary: #0ea5e9;
+            --text: #0f172a;
+            --text-dim: #64748b;
+            --border: rgba(0, 0, 0, 0.06);
+            --sidebar: #f1f5f9;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            min-height: 100vh;
+            transition: background 0.3s ease;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 250px;
+            background: var(--sidebar);
+            border-right: 1px solid var(--border);
+            padding: 32px 16px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow-y: auto;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding 0.4s ease;
+            overflow-x: hidden;
+            z-index: 100;
+        }
+
+        .sidebar.collapsed {
+            width: 70px;
+            padding: 32px 8px;
+        }
+
+        .sidebar-brand {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            white-space: nowrap;
+            transition: transform 0.3s ease;
+            padding-left: 8px;
+        }
+
+        .collapsed .sidebar-brand {
+            transform: translateX(4px);
+        }
+
+        .collapsed .sidebar-brand-text {
+            display: none;
+        }
+
+        #sidebar-toggle {
+            background: var(--border);
+            border: none;
+            color: var(--text);
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            font-size: 0.75rem;
+            margin-left: 8px;
+        }
+
+        #sidebar-toggle:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .collapsed #sidebar-toggle {
+            transform: rotate(180deg);
+            margin: 0 auto 24px;
+        }
+
+        .sidebar h3 {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text-dim);
+            margin: 32px 0 12px;
+            font-weight: 700;
+            white-space: nowrap;
+            transition: opacity 0.3s ease;
+            padding-left: 12px;
+        }
+
+        .collapsed h3 {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .filter-item {
+            padding: 10px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+            white-space: nowrap;
+            position: relative;
+            border: 1px solid transparent;
+        }
+
+        .filter-item:hover {
+            background: rgba(56, 189, 248, 0.05);
+            color: var(--primary);
+        }
+
+        .filter-item.active {
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--primary);
+            font-weight: 700;
+            border-color: rgba(56, 189, 248, 0.2);
+        }
+
+        /* Active Indicator dot or line */
+        .filter-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            width: 4px;
+            height: 16px;
+            background: var(--primary);
+            border-radius: 0 4px 4px 0;
+            transition: all 0.3s ease;
+        }
+
+        .collapsed .filter-item.active::before {
+            left: 4px;
+        }
+
+        .collapsed .filter-item span:first-child {
+            display: none;
+        }
+
+        .collapsed .filter-item {
+            justify-content: center;
+            padding: 10px 0;
+            width: 44px;
+            margin: 0 auto 6px;
+        }
+
+        .collapsed .filter-count {
+            font-size: 0.6rem;
+            padding: 2px 4px;
+            margin-left: 0;
+        }
+
+        .filter-count {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 2px 7px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .active .filter-count {
+            background: var(--primary);
+            color: white;
+            opacity: 1;
+        }
+
+        /* Progress Bar Styles */
+        .progress-wrapper {
+            margin: 12px 0 24px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .progress-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .progress-bg {
+            width: 100%;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--purple));
+            width: 0%;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+        }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            padding: 48px 64px;
+            box-sizing: border-box;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        h1 {
+            font-size: 1.85rem;
+            margin: 0;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 32px;
+            align-items: center;
+        }
+
+        #search {
+            flex: 1;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            padding: 12px 20px;
+            border-radius: 10px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.9rem;
+            outline: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            transition: border-color 0.2s;
+        }
+
+        #search:focus {
+            border-color: var(--primary);
+        }
+
+        .select-btn {
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--card-bg);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-family: inherit;
+        }
+
+        /* Card Styles */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 16px;
+            transition: all 0.2s ease;
+            position: relative;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+            border-color: var(--primary);
+        }
+
+        .q-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text);
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 10px;
+            letter-spacing: -0.01em;
+            transition: color 0.2s;
+        }
+
+        .q-title:hover {
+            color: var(--primary);
+        }
+
+        .badge {
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .badge-platform {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--primary);
+        }
+
+        .badge-type {
+            background: rgba(167, 139, 250, 0.15);
+            color: var(--purple);
+        }
+
+        .badge-solved {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+        }
+
+        .meta-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 12px 0;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            font-weight: 500;
+        }
+
+        .topic-pill {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+
+        .truth-info {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px dashed var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .truth-text {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text);
+            opacity: 0.9;
+        }
+
+        .history-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: block;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+            color: var(--text-dim);
+            transition: color 0.2s;
+        }
+
+        .btn-icon:hover {
+            color: var(--error);
+        }
+
+        .group-header {
+            font-size: 0.8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin: 40px 0 16px;
+            padding-left: 4px;
+            border-left: 3px solid var(--primary);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar" id="sidebar">
+        <button id="sidebar-toggle" title="Toggle Sidebar">◀</button>
+        <div class="sidebar-brand">
+            <span class="sidebar-brand-text">Coding Tracker</span>
+        </div>
+
+        <h3>Platforms</h3>
+        <div id="p-filters">
+            <div class="filter-item active" data-val="all" data-type="platform">
+                <span>All Problems</span>
+                <span class="filter-count" id="total-count">0</span>
+            </div>
+        </div>
+
+        <h3>Discover Topics</h3>
+        <div id="t-filters">
+            <div class="filter-item active" data-val="all" data-type="topic">
+                <span>Any Topic</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="main">
+        <header>
+            <div>
+                <h1 id="main-title">Coding Tracker</h1>
+                <div style="font-size: 0.9rem; color: var(--text-dim); margin-top: 4px;" id="stats">Initializing
+                    stats...</div>
+            </div>
+            <div class="header-actions">
+                <button id="theme-btn" class="select-btn">🌙 Theme</button>
+                <button id="export-btn" class="select-btn"
+                    style="background: var(--primary); color: white; border: none;">Export Data</button>
+            </div>
+        </header>
+
+        <div class="toolbar">
+            <input type="text" id="search" placeholder="Search by name, platform, or topic tags...">
+            <select id="group-by" class="select-btn">
+                <option value="none">Sort by: Timeline</option>
+                <option value="platform">Group by: Platform</option>
+                <option value="topic">Group by: Topic</option>
+            </select>
+        </div>
+
+        <div id="list"></div>
+    </div>
+    <script src="dashboard.js"></script>
+</body>
+
+</html>
