@@ -76,9 +76,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             : allQuestions.filter(q => q.platform === filter.platform);
 
         platformFiltered.forEach(q => {
-            (q.topics || []).forEach(t => {
-                topics[t] = (topics[t] || 0) + 1;
-            });
+            if (Array.isArray(q.topics)) {
+                q.topics.forEach(t => {
+                    topics[t] = (topics[t] || 0) + 1;
+                });
+            }
         });
 
         totalCountEl.innerText = allQuestions.length;

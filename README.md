@@ -28,6 +28,7 @@ A professional, minimalist browser extension to track your coding journey across
 Since this extension is distributed for free outside the Chrome Web Store, follow these steps to install:
 
 1.  **Download**: [Download this repository](https://github.com/AnubhavMaheshwari/Coding-Tracker/archive/refs/heads/main.zip) as a ZIP file and extract it.
+    *   📄 **Need help?** [Read the Setup Guide](assets/setUp.pdf) for detailed instructions.
 2.  **Open Extensions**: In your Chrome browser, go to `chrome://extensions/`.
 3.  **Enable Developer Mode**: Toggle the **"Developer mode"** switch in the top right corner.
 4.  **Load Extension**: Click the **"Load unpacked"** button and select the extracted folder (the one containing `manifest.json`).
