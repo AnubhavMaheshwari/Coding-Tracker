@@ -17,6 +17,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             else showNotif("Could not detect problem details.");
         });
         return true;
+    } else if (request.action === "SAVE_BLOG") {
+        saveBlog();
+        return true;
     }
     return true;
 });
@@ -54,25 +57,46 @@ async function quickSave(subStatus, providedQ = null) {
     const qRaw = providedQ || await waitForScrape();
     if (!qRaw) return;
 
-    const url = window.location.href;
+    // Normalize URL: remove query params and trailing slash
+    let url = window.location.href.split('?')[0].split('#')[0];
+    if (url.endsWith('/')) url = url.slice(0, -1);
+
     const { questions = [] } = await chrome.storage.local.get('questions');
-    const idx = questions.findIndex(q => q.url === url);
+
+    // Check for existing question by normalized URL
+    const idx = questions.findIndex(q => {
+        let qUrl = q.url.split('?')[0].split('#')[0];
+        if (qUrl.endsWith('/')) qUrl = qUrl.slice(0, -1);
+        return qUrl === url;
+    });
+
     const now = Date.now();
     const entry = { timestamp: now, status: subStatus };
 
     if (idx !== -1) {
         if (!questions[idx].history) questions[idx].history = [];
+
+        // Prevent immediate duplicate clicks (optional debounce logic could go here, 
+        // but for now we just add the attempt if it's a new interaction)
         questions[idx].history.push(entry);
         questions[idx].attempts = questions[idx].history.length;
         questions[idx].timestamp = now;
-        if (subStatus === 'AC' && !questions[idx].solvedAt) questions[idx].solvedAt = now;
+
+        // Update solved status if this is an AC and it wasn't solved before
+        if (subStatus === 'AC' && !questions[idx].solvedAt) {
+            questions[idx].solvedAt = now;
+        }
+
+        // Update the stored URL to the clean one if it wasn't already
+        questions[idx].url = url;
+
         await chrome.storage.local.set({ questions });
-        showNotif(`${subStatus} recorded!`);
+        showNotif(`${subStatus} recorded! (Updated)`);
     } else {
         const q = {
             ...qRaw,
             platform: getPlatform(url),
-            url,
+            url: url, // Store normalized URL
             history: [entry],
             attempts: 1,
             timestamp: now,
@@ -110,4 +134,30 @@ function showNotif(msg) {
     }
     document.body.appendChild(div);
     setTimeout(() => div.remove(), 2500);
+}
+
+async function saveBlog() {
+    const url = window.location.href.split('?')[0].split('#')[0];
+    const title = document.title || url;
+    const now = Date.now();
+
+    const { blogs = [] } = await chrome.storage.local.get('blogs');
+
+    // Check if blog already exists
+    const exists = blogs.some(b => b.url === url);
+    if (exists) {
+        showNotif("Blog already saved!");
+        return;
+    }
+
+    const blog = {
+        title,
+        url,
+        timestamp: now,
+        platform: getPlatform(url)
+    };
+
+    blogs.push(blog);
+    await chrome.storage.local.set({ blogs });
+    showNotif("Blog saved successfully! 📖");
 }

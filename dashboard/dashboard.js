@@ -13,7 +13,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const sidebarToggle = document.getElementById('sidebar-toggle');
 
     let allQuestions = [];
-    let filter = { platform: 'all', topic: 'all', search: '' };
+    let allBlogs = [];
+    let filter = { platform: 'all', topic: 'all', search: '', view: 'problems' };
 
     const { sidebarCollapsed = false } = await chrome.storage.local.get('sidebarCollapsed');
     if (sidebarCollapsed) sidebar.classList.add('collapsed');
@@ -45,7 +46,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function toTitleCase(str) {
         if (!str) return '';
-        // Handle camelCase or snake_case if existing
         const result = str.replace(/([A-Z])/g, " $1")
             .replace(/[_-]/g, " ")
             .trim();
@@ -55,13 +55,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function load() {
-        const { questions = [] } = await chrome.storage.local.get('questions');
+        const { questions = [], blogs = [] } = await chrome.storage.local.get(['questions', 'blogs']);
         allQuestions = questions.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        allBlogs = blogs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         updateFilters();
         render();
     }
 
     function updateFilters() {
+        // Platform & Topic filters only apply to Problems view
         const platforms = {};
         const topics = {};
 
@@ -115,19 +117,38 @@ document.addEventListener('DOMContentLoaded', async () => {
             div.innerHTML = `<span>${toTitleCase(t)}</span> <span class="filter-count">${topics[t]}</span>`;
             tFilters.appendChild(div);
         });
+
+        // Handle View Switching UI
+        document.getElementById('view-problems').classList.toggle('active', filter.view === 'problems');
+        document.getElementById('view-blogs').classList.toggle('active', filter.view === 'blogs');
+
+        document.getElementById('view-problems').onclick = () => setFilter('view', 'problems');
+        document.getElementById('view-blogs').onclick = () => setFilter('view', 'blogs');
     }
 
     function setFilter(type, val) {
-        document.querySelectorAll(`.filter-item[data-type="${type}"]`).forEach(el => el.classList.remove('active'));
-        // Find the specific element clicked (if available) or update after re-render
-
-        filter[type] = val;
+        if (type === 'view') {
+            filter.view = val;
+            // Hide/Show filters based on view
+            const pSection = document.getElementById('p-filters').closest('.sidebar-section');
+            const tSection = document.getElementById('t-filters').closest('.sidebar-section'); // Assuming wrapped in section now
+            // Or just hide the containers directly if I didn't wrap them cleanly in HTML check earlier
+            // For now, let's just re-render.
+        } else {
+            document.querySelectorAll(`.filter-item[data-type="${type}"]`).forEach(el => el.classList.remove('active'));
+            filter[type] = val;
+        }
         updateFilters();
         render();
     }
 
     function render() {
         listEl.innerHTML = '';
+        if (filter.view === 'blogs') {
+            renderBlogs();
+            return;
+        }
+
         const groupKey = groupByEl.value;
 
         const filtered = allQuestions.filter(q => {
@@ -144,6 +165,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         document.getElementById('main-title').innerText = filterName;
         statsEl.innerHTML = `<strong>${filtered.length}</strong> items • <strong>${solvedCount}</strong> solved`;
+
+        // Hide/Show filters helper
+        document.getElementById('p-filters').style.display = 'block';
+        document.getElementById('t-filters').style.display = 'block';
+        // Also show headers if I could select them easily, but let's stick to functional
+
+        if (filtered.length === 0) {
+            listEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-dim);">No problems found.</div>';
+            return;
+        }
 
         if (groupKey === 'none') {
             filtered.forEach(q => listEl.appendChild(createCard(q)));
@@ -166,6 +197,58 @@ document.addEventListener('DOMContentLoaded', async () => {
                 groups[label].forEach(q => listEl.appendChild(createCard(q)));
             });
         }
+    }
+
+    function renderBlogs() {
+        const filtered = allBlogs.filter(b =>
+            !filter.search || b.title.toLowerCase().includes(filter.search) || b.url.toLowerCase().includes(filter.search)
+        );
+
+        document.getElementById('main-title').innerText = "Saved Blogs";
+        statsEl.innerHTML = `<strong>${filtered.length}</strong> stored articles`;
+
+        // Hide irrelevant filters
+        document.getElementById('p-filters').style.display = 'none';
+        document.getElementById('t-filters').style.display = 'none';
+
+        if (filtered.length === 0) {
+            listEl.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-dim);">No saved blogs yet.<br><small>Right click on any page -> Save as Blog</small></div>';
+            return;
+        }
+
+        filtered.forEach(b => {
+            const div = document.createElement('div');
+            div.className = 'card';
+
+            const dateStr = new Intl.DateTimeFormat('default', {
+                year: 'numeric', month: 'short', day: 'numeric'
+            }).format(new Date(b.timestamp));
+
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:start;">
+                    <div style="flex:1;">
+                        <a href="${b.url}" target="_blank" class="q-title">${b.title}</a>
+                        <div style="font-size:0.8rem; color:var(--text-dim); margin-top:4px;">
+                            ${new URL(b.url).hostname} • Saved on ${dateStr}
+                        </div>
+                    </div>
+                    <button class="btn-icon delete-btn">🗑️</button>
+                </div>
+             `;
+
+            const delBtn = div.querySelector('.delete-btn');
+            delBtn.onclick = () => delBlog(b.url);
+
+            listEl.appendChild(div);
+        });
+    }
+
+    async function delBlog(url) {
+        if (!confirm("Delete this blog?")) return;
+        const { blogs = [] } = await chrome.storage.local.get('blogs');
+        const updated = blogs.filter(b => b.url !== url);
+        await chrome.storage.local.set({ blogs: updated });
+        load();
     }
 
     function createCard(q) {
@@ -240,7 +323,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     exportBtn.onclick = () => {
-        const data = JSON.stringify(allQuestions, null, 2);
+        const data = JSON.stringify({ questions: allQuestions, blogs: allBlogs }, null, 2);
         const blob = new Blob([data], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');

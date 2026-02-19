@@ -16,6 +16,12 @@ chrome.runtime.onInstalled.addListener(() => {
         title: "Open Coding Tracker Dashboard",
         contexts: ["all"]
     });
+
+    chrome.contextMenus.create({
+        id: "save-blog",
+        title: "Save as Blog 📖",
+        contexts: ["all"]
+    });
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
@@ -25,5 +31,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         chrome.tabs.sendMessage(tab.id, { action: "QUICK_SAVE", status: "AC" });
     } else if (info.menuItemId === "save-try") {
         chrome.tabs.sendMessage(tab.id, { action: "QUICK_SAVE", status: "Attempt" });
+    } else if (info.menuItemId === "save-blog") {
+        chrome.tabs.sendMessage(tab.id, { action: "SAVE_BLOG" });
     }
 });
